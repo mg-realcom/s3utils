@@ -3,7 +3,6 @@ package s3utils
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -12,16 +11,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/rs/zerolog"
 )
 
 type Client struct {
 	client *s3.Client
 	region string
-	logger *zerolog.Logger
 }
 
-func NewClient(ctx context.Context, logger *zerolog.Logger, region string) (*Client, error) {
+func NewClient(ctx context.Context, region string) (*Client, error) {
 	// Loading configuration from ~/.aws/*
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -34,41 +31,7 @@ func NewClient(ctx context.Context, logger *zerolog.Logger, region string) (*Cli
 	return &Client{
 		client: client,
 		region: region,
-		logger: logger,
 	}, nil
-}
-
-func (s *Client) ListBuckets() {
-	// Getting the list of buckets
-	result, err := s.client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
-	if err != nil {
-		s.logger.Fatal().Err(err).Msg("failed to list buckets")
-	}
-
-	for _, bucket := range result.Buckets {
-		s.logger.Info().Msgf("bucket=%s creation time=%s", aws.ToString(bucket.Name), bucket.CreationDate.Format("2006-01-02 15:04:05 Monday"))
-	}
-}
-
-func (s *Client) UploadFile(ctx context.Context, bucketName, objectKey, fileName string) error {
-	file, err := os.Open(fileName)
-	if err != nil {
-		s.logger.Err(err).Msgf("Couldn't open file %v to upload. Here's why: %v\n", fileName, err)
-	} else {
-		defer file.Close()
-
-		_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(bucketName),
-			Key:    aws.String(objectKey),
-			Body:   file,
-		})
-		if err != nil {
-			s.logger.Err(err).Msgf("Couldn't upload file %v to %v:%v. Here's why: %v\n",
-				fileName, bucketName, objectKey, err)
-		}
-	}
-
-	return err
 }
 
 func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName string, directory string, filePath string, date time.Time) error {
@@ -76,19 +39,18 @@ func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName s
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		s.logger.Err(err).Msgf("Couldn't open file %v to upload. Here's why: %v\n", filePath, err)
-	} else {
-		defer file.Close()
+		return fmt.Errorf("unable to open file, %v", err)
+	}
 
-		_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(bucketName),
-			Key:    aws.String(objectKey),
-			Body:   file,
-		})
-		if err != nil {
-			s.logger.Err(err).Msgf("Couldn't upload file %v to %v:%v. Here's why: %v\n",
-				filePath, bucketName, objectKey, err)
-		}
+	defer file.Close()
+
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+		Body:   file,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to upload file, %v", err)
 	}
 
 	return err
@@ -104,7 +66,7 @@ func (s *Client) DeleteFolderByDate(ctx context.Context, bucketName string, dire
 
 	listResp, err := s.client.ListObjectsV2(ctx, listObjectsInput)
 	if err != nil {
-		log.Fatalf("Unable to list objects in folder, %v", err)
+		return fmt.Errorf("unable to list objects, %v", err)
 	}
 
 	var deleteObjects []types.ObjectIdentifier
@@ -138,8 +100,7 @@ func (s *Client) CreateBucket(ctx context.Context, bucketName string) error {
 		},
 	})
 	if err != nil {
-		s.logger.Err(err).Msgf("Couldn't create bucket %v in Region %v. Here's why: %v\n",
-			bucketName, s.region, err)
+		return fmt.Errorf("unable to create bucket, %v", err)
 	}
 
 	return err

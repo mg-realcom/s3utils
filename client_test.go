@@ -11,6 +11,7 @@ func Test_generateObjectKeyByDate(t *testing.T) {
 		fileName    string
 		date        time.Time
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -44,6 +45,7 @@ func Test_generateObjectKeyByDate(t *testing.T) {
 			want: "directory/raw/_year=2024/_month=09/_day=30/_date=2024-09-30/test.json",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := generateObjectKeyByDate(tt.args.destination, tt.args.fileName, tt.args.date); got != tt.want {
@@ -58,6 +60,7 @@ func Test_generateFolderDestinationByDate(t *testing.T) {
 		destination string
 		date        time.Time
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -88,6 +91,7 @@ func Test_generateFolderDestinationByDate(t *testing.T) {
 			want: "directory/_year=2024/_month=09/_day=30/_date=2024-09-30",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := generateFolderDestinationByDate(tt.args.destination, tt.args.date); got != tt.want {
