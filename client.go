@@ -56,6 +56,7 @@ func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName s
 	return err
 }
 
+// DeleteFolderByDate deletes all objects in a folder with a specific date prefix.
 func (s *Client) DeleteFolderByDate(ctx context.Context, bucketName string, directory string, date time.Time) error {
 	objectKey := generateFolderDestinationByDate(directory, date)
 
@@ -74,6 +75,11 @@ func (s *Client) DeleteFolderByDate(ctx context.Context, bucketName string, dire
 		deleteObjects = append(deleteObjects, types.ObjectIdentifier{
 			Key: aws.String(*object.Key),
 		})
+	}
+
+	if len(deleteObjects) == 0 {
+		// If no objects are found, return a success message
+		return nil
 	}
 
 	deleteInput := &s3.DeleteObjectsInput{
