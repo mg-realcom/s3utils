@@ -70,7 +70,7 @@ func (s *Client) DeleteFolderByDate(ctx context.Context, bucketName string, dire
 		return fmt.Errorf("unable to list objects, %v", err)
 	}
 
-	var deleteObjects []types.ObjectIdentifier
+	deleteObjects := make([]types.ObjectIdentifier, 0, len(listResp.Contents))
 	for _, object := range listResp.Contents {
 		deleteObjects = append(deleteObjects, types.ObjectIdentifier{
 			Key: aws.String(*object.Key),
@@ -78,7 +78,6 @@ func (s *Client) DeleteFolderByDate(ctx context.Context, bucketName string, dire
 	}
 
 	if len(deleteObjects) == 0 {
-		// If no objects are found, return a success message
 		return nil
 	}
 
@@ -96,6 +95,77 @@ func (s *Client) DeleteFolderByDate(ctx context.Context, bucketName string, dire
 	}
 
 	return nil
+}
+
+func (s *Client) DeleteFolder(ctx context.Context, bucketName string, directory string) error {
+	listObjectsInput := &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucketName),
+		Prefix: aws.String(directory),
+	}
+
+	listResp, err := s.client.ListObjectsV2(ctx, listObjectsInput)
+	if err != nil {
+		return fmt.Errorf("unable to list objects, %v", err)
+	}
+
+	deleteObjects := make([]types.ObjectIdentifier, 0, len(listResp.Contents))
+	for _, object := range listResp.Contents {
+		deleteObjects = append(deleteObjects, types.ObjectIdentifier{
+			Key: aws.String(*object.Key),
+		})
+	}
+
+	if len(deleteObjects) == 0 {
+		return nil
+	}
+
+	deleteInput := &s3.DeleteObjectsInput{
+		Bucket: aws.String(bucketName),
+		Delete: &types.Delete{
+			Objects: deleteObjects,
+			Quiet:   aws.Bool(true),
+		},
+	}
+
+	_, err = s.client.DeleteObjects(ctx, deleteInput)
+	if err != nil {
+		return fmt.Errorf("unable to delete objects, %v", err)
+	}
+
+	return nil
+}
+
+// DeleteObject deletes all objects in a folder with a specific date prefix.
+func (s *Client) DeleteObject(ctx context.Context, bucketName string, key string) error {
+	deleteObjectsInput := &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    &key,
+	}
+
+	_, err := s.client.DeleteObject(ctx, deleteObjectsInput)
+	if err != nil {
+		return fmt.Errorf("unable to delete object, %v", err)
+	}
+
+	return nil
+}
+
+func (s *Client) IsObjectExists(ctx context.Context, bucketName string, key string) (bool, error) {
+	listObjectsInput := &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucketName),
+		Prefix: &key,
+	}
+
+	listObjectsResp, err := s.client.ListObjectsV2(ctx, listObjectsInput)
+	if err != nil {
+		return false, fmt.Errorf("unable to list objects, %v", err)
+	}
+
+	if len(listObjectsResp.Contents) > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (s *Client) CreateBucket(ctx context.Context, bucketName string) error {
