@@ -3,6 +3,7 @@ package s3utils
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -166,6 +167,39 @@ func (s *Client) IsObjectExists(ctx context.Context, bucketName string, key stri
 	}
 
 	return false, nil
+}
+
+func (s *Client) GetObject(ctx context.Context, bucketName string, key string, localPath string) error {
+	getObjectInput := &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    &key,
+	}
+
+	result, err := s.client.GetObject(ctx, getObjectInput)
+	if err != nil {
+		return fmt.Errorf("unable to delete object, %v", err)
+	}
+
+	defer result.Body.Close()
+
+	file, err := os.Create(localPath)
+	if err != nil {
+		return fmt.Errorf("unable to create file, %v", err)
+	}
+
+	defer file.Close()
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		return fmt.Errorf("unable to read s3 object, %v", err)
+	}
+
+	_, err = file.Write(body)
+	if err != nil {
+		return fmt.Errorf("unable to write file, %v", err)
+	}
+
+	return nil
 }
 
 func (s *Client) CreateBucket(ctx context.Context, bucketName string) error {
