@@ -35,6 +35,28 @@ func NewClient(ctx context.Context, region string) (*Client, error) {
 	}, nil
 }
 
+func (s *Client) UploadFileBase(ctx context.Context, bucketName string, directory string, filePath string) error {
+	objectKey := generateObjectKeyBase(directory, filePath)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("unable to open file, %v", err)
+	}
+
+	defer file.Close()
+
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+		Body:   file,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to upload file, %v", err)
+	}
+
+	return err
+}
+
 func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName string, directory string, filePath string, date time.Time) error {
 	objectKey := generateObjectKeyByDate(directory, filePath, date)
 
@@ -219,6 +241,13 @@ func (s *Client) CreateBucket(ctx context.Context, bucketName string) error {
 func generateObjectKeyByDate(directory string, filePath string, date time.Time) string {
 	fileName := strings.Split(filePath, "/")[len(strings.Split(filePath, "/"))-1]
 	objectKey := fmt.Sprintf("%s/_year=%v/_month=%v/_day=%v/_date=%v/%s", directory, date.Year(), date.Format("01"), date.Format("02"), date.Format(time.DateOnly), fileName)
+
+	return objectKey
+}
+
+func generateObjectKeyBase(directory string, filePath string) string {
+	fileName := strings.Split(filePath, "/")[len(strings.Split(filePath, "/"))-1]
+	objectKey := fmt.Sprintf("%s/%s", directory, fileName)
 
 	return objectKey
 }
