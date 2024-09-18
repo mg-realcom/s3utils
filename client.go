@@ -35,8 +35,8 @@ func NewClient(ctx context.Context, region string) (*Client, error) {
 	}, nil
 }
 
-func (s *Client) UploadFileBase(ctx context.Context, bucketName string, directory string, filePath string) error {
-	objectKey := generateObjectKeyBase(directory, filePath)
+func (s *Client) UploadFileBase(ctx context.Context, bucketName string, directory string, filePath string, externalFilename string) error {
+	objectKey := generateObjectKeyBase(directory, externalFilename)
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -245,9 +245,8 @@ func generateObjectKeyByDate(directory string, filePath string, date time.Time) 
 	return objectKey
 }
 
-func generateObjectKeyBase(directory string, filePath string) string {
-	fileName := strings.Split(filePath, "/")[len(strings.Split(filePath, "/"))-1]
-	objectKey := fmt.Sprintf("%s/%s", directory, fileName)
+func generateObjectKeyBase(directory string, filename string) string {
+	objectKey := fmt.Sprintf("%s/%s", directory, filename)
 
 	return objectKey
 }
