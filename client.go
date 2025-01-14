@@ -63,6 +63,15 @@ func (s *Client) UploadFileBase(ctx context.Context, bucketName string, director
 
 	defer file.Close()
 
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return NewSDKError("unable to get file info", err)
+	}
+
+	if fileInfo.Size() == 0 {
+		return NewValidationError("file is empty")
+	}
+
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectKey),
@@ -101,6 +110,15 @@ func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName s
 	}
 
 	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return NewSDKError("unable to get file info", err)
+	}
+
+	if fileInfo.Size() == 0 {
+		return NewValidationError("file is empty")
+	}
 
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
