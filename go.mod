@@ -1,6 +1,6 @@
 module github.com/mg-realcom/s3utils
 
-go 1.23.5
+go 1.23.4
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.1
