@@ -37,39 +37,39 @@ func NewClient(ctx context.Context, region string) (*Client, error) {
 }
 
 // UploadFileBase uploads a file.
-func (s *Client) UploadFileBase(ctx context.Context, bucketName string, directory string, filePath string, externalFilename string) error {
+func (s *Client) UploadFileBase(ctx context.Context, bucketName string, directory string, filePath string, externalFilename string) (string, error) {
 	if bucketName == "" {
-		return NewValidationError("bucket name is empty")
+		return "", NewValidationError("bucket name is empty")
 	}
 
 	if directory == "" {
-		return NewValidationError("directory is empty")
+		return "", NewValidationError("directory is empty")
 	}
 
 	if filePath == "" {
-		return NewValidationError("file path is empty")
+		return "", NewValidationError("file path is empty")
 	}
 
 	if externalFilename == "" {
-		return NewValidationError("external filename is empty")
+		return "", NewValidationError("external filename is empty")
 	}
 
 	objectKey := generateObjectKeyBase(directory, externalFilename)
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return NewSDKError("unable to open file", err)
+		return "", NewSDKError("unable to open file", err)
 	}
 
 	defer file.Close()
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return NewSDKError("unable to get file info", err)
+		return "", NewSDKError("unable to get file info", err)
 	}
 
 	if fileInfo.Size() == 0 {
-		return NewValidationError("file is empty")
+		return "", NewValidationError("file is empty")
 	}
 
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
@@ -78,46 +78,46 @@ func (s *Client) UploadFileBase(ctx context.Context, bucketName string, director
 		Body:   file,
 	})
 	if err != nil {
-		return NewS3Error("unable to upload file", err)
+		return "", NewS3Error("unable to upload file", err)
 	}
 
-	return err
+	return objectKey, nil
 }
 
 // UploadFileWithDateDestination uploads a file to folder with a specific date prefix.
-func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName string, directory string, filePath string, date time.Time) error {
+func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName string, directory string, filePath string, date time.Time) (string, error) {
 	if bucketName == "" {
-		return NewValidationError("bucket name is empty")
+		return "", NewValidationError("bucket name is empty")
 	}
 
 	if directory == "" {
-		return NewValidationError("directory is empty")
+		return "", NewValidationError("directory is empty")
 	}
 
 	if filePath == "" {
-		return NewValidationError("file path is empty")
+		return "", NewValidationError("file path is empty")
 	}
 
 	if date.IsZero() {
-		return NewValidationError("date is empty")
+		return "", NewValidationError("date is empty")
 	}
 
 	objectKey := generateObjectKeyByDate(directory, filePath, date)
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return NewSDKError("unable to open file", err)
+		return "", NewSDKError("unable to open file", err)
 	}
 
 	defer file.Close()
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return NewSDKError("unable to get file info", err)
+		return "", NewSDKError("unable to get file info", err)
 	}
 
 	if fileInfo.Size() == 0 {
-		return NewValidationError("file is empty")
+		return "", NewValidationError("file is empty")
 	}
 
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
@@ -126,10 +126,10 @@ func (s *Client) UploadFileWithDateDestination(ctx context.Context, bucketName s
 		Body:   file,
 	})
 	if err != nil {
-		return NewS3Error("unable to upload file", err)
+		return "", NewS3Error("unable to upload file", err)
 	}
 
-	return err
+	return objectKey, err
 }
 
 // DeleteFolderByDate deletes all objects in a folder with a specific date prefix.
